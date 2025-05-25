@@ -5,7 +5,9 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)
+
+# Allow only your Vercel frontend to access the backend
+CORS(app, origins=["https://diabetes-tracker-two.vercel.app"])
 
 EXCEL_PATH = "sugar_chart.xlsx"
 
@@ -112,7 +114,7 @@ def reset_today():
     if len(df) > 0 and str(df.iloc[-1]['DATE']) == today:
         df = df.iloc[:-1]
         df.to_excel(EXCEL_PATH, index=False, engine='openpyxl')
-        return jsonify({'success': True, 'message': 'Today\'s entry reset'})
+        return jsonify({'success': True, 'message': "Today's entry reset"})
     else:
         return jsonify({'success': False, 'message': 'No entry for today to reset'})
 
@@ -127,4 +129,5 @@ def download_excel():
     return send_file(EXCEL_PATH, as_attachment=True)
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=5050)
+    port = int(os.environ.get("PORT", 5050))  # Use Render's port if set, otherwise 5050 locally
+    app.run(debug=True, host="0.0.0.0", port=port)

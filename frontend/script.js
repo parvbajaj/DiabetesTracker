@@ -1,4 +1,5 @@
-const API_BASE = "http://192.168.1.169:5050"; // use your backend IP and PORT
+// Use deployed Render backend for API base
+const API_BASE = "https://diabetestracker.onrender.com";
 
 const STEPS = [
   'FASTING',
