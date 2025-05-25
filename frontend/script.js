@@ -1,3 +1,4 @@
+// Use deployed Render backend for API base
 const API_BASE = "https://diabetestracker.onrender.com";
 
 const STEPS = [
@@ -20,73 +21,6 @@ const INSULIN_FIELDS = [
   'Lantus'
 ];
 
-// --- Chart.js Sugar Trend ---
-async function renderSugarChart() {
-  const chartArea = document.getElementById('sugarChart');
-  if (!chartArea) return;
-  const data = await fetchShowTable();
-  if (!data?.rows?.length) return;
-
-  const dateIdx = data.columns.indexOf('DATE');
-  // Only sugar columns (not insulin or Lantus)
-  const sugarCols = data.columns.filter(
-    c => c !== 'DATE' && !c.toLowerCase().includes('insulin') && c !== 'Lantus'
-  );
-  const sugarColIdxs = sugarCols.map(col => data.columns.indexOf(col));
-  const labels = data.rows.map(row => row[dateIdx]);
-
-  const colors = [
-    'rgb(255,99,132)',  // red
-    'rgb(54,162,235)',  // blue
-    'rgb(255,206,86)',  // yellow
-    'rgb(75,192,192)',  // teal
-    'rgb(153,102,255)', // purple
-    'rgb(255,159,64)',  // orange
-    'rgb(0,0,0)',       // black
-    'rgb(100,200,100)', // green
-  ];
-  const datasets = sugarCols.map((col, i) => ({
-    label: col,
-    data: data.rows.map(row => {
-      const val = row[sugarColIdxs[i]];
-      const num = parseFloat(val);
-      return (val !== "" && !isNaN(num)) ? num : null;
-    }),
-    borderColor: colors[i % colors.length],
-    backgroundColor: colors[i % colors.length],
-    fill: false,
-    spanGaps: true,
-    tension: 0.18,
-    pointRadius: 3,
-    pointHoverRadius: 5
-  }));
-
-  // Remove previous chart if any
-  if (window.sugarChartInstance) {
-    window.sugarChartInstance.destroy();
-  }
-
-  window.sugarChartInstance = new Chart(chartArea, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true, position: 'bottom' },
-        title: { display: true, text: 'Sugar Level Trend (All Readings)' }
-      },
-      scales: {
-        x: {
-          title: { display: true, text: 'Date' }
-        },
-        y: {
-          title: { display: true, text: 'Sugar Level (mg/dL)' }
-        }
-      }
-    }
-  });
-}
-
 async function fetchCurrentStep() {
   try {
     const res = await fetch(`${API_BASE}/current-step`);
@@ -98,6 +32,7 @@ async function fetchCurrentStep() {
 }
 
 async function submitStep(step, value) {
+  // Auto-append " units" for insulin fields if not present
   if (INSULIN_FIELDS.includes(step) && value && !/unit/i.test(value)) {
     value = value + " units";
   }
@@ -114,6 +49,7 @@ async function fetchEditToday() {
 }
 
 async function saveEditToday(data) {
+  // Auto-append " units" for insulin fields if not present
   INSULIN_FIELDS.forEach(field => {
     if (data[field] && !/unit/i.test(data[field])) {
       data[field] = data[field] + " units";
@@ -138,7 +74,7 @@ async function fetchShowTable() {
 }
 
 function renderShowTable(tableArea, columns, rows) {
-  let html = "<table class='styled-table'><thead><tr>";
+  let html = "<table><thead><tr>";
   columns.forEach(col => html += `<th>${col}</th>`);
   html += "</tr></thead><tbody>";
   rows.forEach(row => {
@@ -165,7 +101,6 @@ async function main() {
   const saveEditBtn = document.getElementById('save-edit-btn');
   const closeEditBtn = document.getElementById('close-edit-btn');
   const showTableArea = document.getElementById('show-table-area');
-  const chartContainer = document.getElementById('chart-container');
 
   let showTableVisible = false;
 
@@ -192,9 +127,8 @@ async function main() {
       doneMsg.style.display = '';
       doneMsg.textContent = 'All steps completed for today!';
     }
-    // Hide the table & chart if step changes
+    // Hide the table if step changes
     showTableArea.style.display = 'none';
-    chartContainer.style.display = 'none';
     showTableVisible = false;
     showBtn.innerHTML = `<i class="bi bi-table"></i> Show`;
   }
@@ -229,7 +163,6 @@ async function main() {
     editForm.style.display = '';
     document.getElementById('step-area').style.display = 'none';
     showTableArea.style.display = 'none';
-    chartContainer.style.display = 'none';
     showTableVisible = false;
     showBtn.innerHTML = `<i class="bi bi-table"></i> Show`;
   });
@@ -263,8 +196,6 @@ async function main() {
       const data = await fetchShowTable();
       renderShowTable(showTableArea, data.columns, data.rows);
       showTableArea.style.display = '';
-      chartContainer.style.display = '';
-      await renderSugarChart();
       showBtn.innerHTML = `<i class="bi bi-x-circle"></i> Hide`;
       editForm.style.display = 'none';
       document.getElementById('step-area').style.display = '';
@@ -272,7 +203,6 @@ async function main() {
       showTableVisible = true;
     } else {
       showTableArea.style.display = 'none';
-      chartContainer.style.display = 'none';
       showBtn.innerHTML = `<i class="bi bi-table"></i> Show`;
       showTableVisible = false;
     }
